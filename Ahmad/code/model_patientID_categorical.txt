@@ -1,0 +1,303 @@
+My questions:
+##########################################
+# Build supervised rows
+# Each row becomes: predictors from the past -> current pre-meal glucose target.
+
+def build_modeling_rows(patient_df):
+    rows = []
+    history = []
+
+    for _, row in patient_df.iterrows():
+        code = row["Code"]
+        t = row["AbsMinute"]
+        value = row["ValueNum"]
+
+        # If this row is a target glucose measurement, create one training example.
+        if code in TARGET_CODES and pd.notna(value):
+            prior = [event for event in history if event["time"] < t]
+
+            def prior_events(codes, hours):
+                cutoff = t - hours * 60
+                return [e for e in prior if e["code"] in codes and e["time"] >= cutoff]
+
+            def sum_values(codes, hours):
+                events = prior_events(codes, hours)
+                return sum(e["value"] for e in events if pd.notna(e["value"]))
+
+            def count_events(codes, hours):
+                return len(prior_events(codes, hours))
+
+            previous_glucose = [
+                e for e in prior
+                if e["code"] in GLUCOSE_CODES and pd.notna(e["value"])
+            ]
+
+            if previous_glucose:
+                last_glucose = previous_glucose[-1]
+                prev_glucose_value = last_glucose["value"]
+                hours_since_prev_glucose = (t - last_glucose["time"]) / 60
+            else:
+                prev_glucose_value = np.nan
+                hours_since_prev_glucose = np.nan
+
+            minute = row["MinuteOfDay"]
+
+            rows.append({
+                "patientId": row["patientId"],
+                "target_code": code,
+                "Day": row["Day"],
+                "MinuteOfDay": minute,
+                "time_sin": np.sin(2 * np.pi * minute / 1440),
+                "time_cos": np.cos(2 * np.pi * minute / 1440),
+
+                "prev_glucose": prev_glucose_value,
+                "hours_since_prev_glucose": hours_since_prev_glucose,
+
+                "regular_insulin_8h": sum_values({"33"}, 8),
+                "nph_insulin_24h": sum_values({"34"}, 24),
+                "ultralente_insulin_24h": sum_values({"35"}, 24),
+
+                "typical_meal_6h": count_events({"66"}, 6),
+                "more_meal_6h": count_events({"67"}, 6),
+                "less_meal_6h": count_events({"68"}, 6),
+
+                "typical_exercise_6h": count_events({"69"}, 6),
+                "more_exercise_6h": count_events({"70"}, 6),
+                "less_exercise_6h": count_events({"71"}, 6),
+
+                "hypo_symptoms_24h": count_events({"65"}, 24),
+                "special_event_24h": count_events({"72"}, 24),
+
+                "glucose": value,
+            })
+
+        # Add current event after feature creation so same-time insulin is not leaked.
+        history.append({
+            "time": t,
+            "code": code,
+            "value": value,
+        })
+
+    return rows
+
+
+model_rows = []
+for _, patient_df in df.groupby("patientId"):
+    model_rows.extend(build_modeling_rows(patient_df))
+
+model_df = pd.DataFrame(model_rows)
+
+print(model_df.shape)
+model_df.head()
+
+can you explain what this code is doing?
+
+model_patientID_categorical.ipynb
+ 
+what is timesin time cos 
+is "hours since prev glucose" how long since the last time we measured the glucose levels,
+and tell me how you are calculating this:
+regular_insulin_8h	nph_insulin_24h	ultralente_insulin_24h	typical_meal_6h	more_meal_6h	less_meal_6h	typical_exercise_6h	more_exercise_6h	less_exercise_6h	hypo_symptoms_24h	special_event_24h
+is this cumalitive over 24 and 6 and 8 past hours since the current time? (So if someone got two nph insluin in the same day, we have it 13 say for the first dose, and when they get the second does it will become 23 if its within the same 24h period?
+
+How exactly are we splitting the data:
+# Time-based train/test split within each patient
+# This tests whether earlier patient history can predict later patient glucose.
+
+model_df["target_number"] = model_df.groupby("patientId").cumcount()
+model_df["target_count"] = model_df.groupby("patientId")["patientId"].transform("count")
+
+train_mask = model_df["target_number"] < 0.8 * model_df["target_count"]
+
+X_train = X.loc[train_mask]
+X_test = X.loc[~train_mask]
+y_train = y.loc[train_mask]
+y_test = y.loc[~train_mask]
+
+print("Train rows:", len(X_train))
+print("Test rows:", len(X_test))
+
+we should split based per user not the whole dataset
+so for example, if there are 300 days of information, keep 80% for training and the last 20% for testing, so they keep 240 days of data for training and the rest for testing
+(What is it currently, and change it to the above specified requiremetns, note that different patients have a different number of days for which they were participating)
+
+For this:
+# Baseline 2: predict using previous glucose when available.
+prev_pred = X_test["prev_glucose"].fillna(y_train.mean())
+results.append(evaluate_predictions("Previous glucose baseline", y_test, prev_pred))
+does it just take the last available glucose value for the prediction
+
+
+what do you mean by:
+# Basline 3: Patient + target-code baseline:
+# predict each patient's average glucose for that measurement type.
+train_df = model_df.loc[train_mask].copy()
+test_df = model_df.loc[~train_mask].copy()
+
+global_mean = train_df["glucose"].mean()
+patient_means = train_df.groupby("patientId")["glucose"].mean()
+patient_code_means = train_df.groupby(["patientId", "target_code"])["glucose"].mean()
+
+patient_code_pred = []
+
+for _, row in test_df.iterrows():
+    key = (row["patientId"], row["target_code"])
+
+    if key in patient_code_means:
+        patient_code_pred.append(patient_code_means[key])
+    elif row["patientId"] in patient_means:
+        patient_code_pred.append(patient_means[row["patientId"]])
+    else:
+        patient_code_pred.append(global_mean)
+
+results.append(
+    evaluate_predictions(
+        "Patient + target-code baseline",
+        y_test,
+        patient_code_pred
+    )
+)
+
+what do you mean each average glucose for that measurement type, so if its a pre-lunch or pre-breakfast, we just get the average for each and use that as a baseline
+if this is the case, i think this is too strong of a baseline, instead, make it the average of the glucose level per patient rather than per measuremetn type
+
+briefly explain the differences, and workings of "ridge" Lasso" and "Elastic Net"
+and what these 
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+        ("model", model),
+control, and what other options that there are?
+and are these regression models, that will give a different input, or is it a best fit straight line?
+
+
+Model	MSE	RMSE	MAE	Selected Predictors
+3	Ridge	4923.808116	70.169852	55.549845	86.0
+2	Patient + target-code baseline	4937.945745	70.270518	54.678393	NaN
+5	Elastic Net	4962.742138	70.446733	55.936462	42.0
+4	LASSO	4962.742138	70.446733	55.936462	42.0
+0	Mean baseline	5892.664434	76.763692	62.582119	NaN
+1	Previous glucose baseline	9377.593643	96.837976	71.344254	NaN
+
+Can you also note the normal ranges for glucose levels that we would expect  (so from 30 to 120 for example)
+can you explain what each of those measurements are telling us about the models
+MSE, RMSE, MAE
+
+# Plot selected coefficients
+
+selected_predictors.head(15).sort_values().plot(kind="barh", figsize=(8, 5))
+plt.title("Top Selected Elastic Net Predictors")
+plt.xlabel("Coefficient after scaling")
+plt.tight_layout()
+plt.show()
+can you explain what this graph shows us, what does having a high positive/negative coefficient mean, is a lower coefficient better?
+
+What is this:
+# Custom objective function for the assignment writeup
+# This matches the elastic net objective:
+# MSE term + L1 sparsity penalty + L2 stability penalty.
+
+def elastic_net_objective(y_true, y_pred, beta, lambda_value, l1_ratio):
+    mse_term = 0.5 * np.mean((y_true - y_pred) ** 2)
+    l1_term = lambda_value * l1_ratio * np.sum(np.abs(beta))
+    l2_term = 0.5 * lambda_value * (1 - l1_ratio) * np.sum(beta ** 2)
+    return mse_term + l1_term + l2_term
+
+elastic = fitted_models["Elastic Net"]
+elastic_model = elastic.named_steps["model"]
+
+elastic_pred = elastic.predict(X_test)
+elastic_beta = elastic_model.coef_
+
+objective_value = elastic_net_objective(
+    y_test,
+    elastic_pred,
+    elastic_beta,
+    lambda_value=elastic_model.alpha_,
+    l1_ratio=elastic_model.l1_ratio_,
+)
+
+print("Elastic Net alpha:", elastic_model.alpha_)
+print("Elastic Net l1_ratio:", elastic_model.l1_ratio_)
+print("Elastic Net objective value:", objective_value)
+
+Is this another model that we are testing, a custom implementation, what are these values e are getting in the output, how does it perform against the other methods
+
+should we also give the models some better understanding/seperation of patientIDs and their perspective Days, so it understands levels might sort of reset or the like
+
+are we ensuring to properly scale and normalize any values neeeded, are we providing a distinction that the value for the insulin doses are on a different scale than that of the values for glucose, so it may understand a causalty relationship
+############################################################
+
+Answer: 
+
+
+What The Row Builder Does
+That function converts the event log into a supervised learning table.
+
+The raw data is like this:
+
+patient event at time t
+patient event at time t
+patient event at time t
+The model needs this instead:
+
+past information before time t -> current glucose value at time t
+So every time the loop finds a target glucose code 58, 60, 62, 64, it creates one model row. The target is the current glucose value, and the predictors are built from earlier rows only.
+__________
+time_sin and time_cos represent time of day cyclically. MinuteOfDay = 1439 and MinuteOfDay = 0 are far apart numerically, but in real life they are only one minute apart. These features encode the daily cycle:
+time_sin = np.sin(2 * np.pi * minute / 1440)
+time_cos = np.cos(2 * np.pi * minute / 1440)
+__________
+Ridge, LASSO, Elastic Net
+These are all regression models. They fit a weighted linear equation:
+predicted glucose = b0 + b1*x1 + b2*x2 + ... + bp*xp
+So yes, conceptually it is a best-fit line, but in many dimensions.
+
+Ridge: keeps all predictors but shrinks coefficients. Good for correlated features.
+LASSO: can force some coefficients exactly to zero. Good for feature selection.
+Elastic Net: mix of Ridge and LASSO. It can select predictors while being more stable when features are correlated.
+
+This part:
+("imputer", SimpleImputer(strategy="median")),
+("scaler", StandardScaler()),
+("model", model),
+
+means:
+SimpleImputer: fills missing values. Median means missing prev_glucose or hours_since_prev_glucose becomes the median training value. Other options include "mean", "most_frequent", or a constant.
+StandardScaler: normalizes numeric columns to mean 0 and standard deviation 1. This is important because insulin doses, glucose values, day numbers, and one-hot patient IDs are on different scales.
+model: the actual Ridge, LASSO, or Elastic Net model.
+
+Scaling does not prove causality, but it prevents the model from treating larger-scale variables as automatically more important.
+_______________________________
+Metrics
+Your table says:
+MSE: average squared error
+RMSE: square root of MSE, in glucose units
+MAE: average absolute error, in glucose units
+Example: RMSE = 70 means predictions are often off by about 70 mg/dL, with larger errors punished more strongly. MAE = 55 means the average absolute miss is about 55 mg/dL.
+
+MSE is harder to interpret directly because the unit is squared glucose.
+For medical context, common diabetes glucose targets are roughly 80-130 mg/dL before meals and under 180 mg/dL about 1-2 hours after meals, while below 70 mg/dL is generally considered low. Sources: CDC and NIDDK.
+_______________________________
+Coefficient Plot
+The coefficient plot shows which predictors Elastic Net selected and how strongly they move the prediction.
+
+Positive coefficient:
+
+higher feature value -> higher predicted glucose
+Negative coefficient:
+
+higher feature value -> lower predicted glucose
+A bigger absolute value means stronger influence after scaling. Lower is not “better.” Zero means the model did not use that feature.
+_______________________________
+Custom Objective Function
+This is not another model. It is just calculating the Elastic Net objective value after the model is already trained:
+
+objective = MSE term + L1 sparsity penalty + L2 stability penalty
+alpha is the regularization strength chosen by cross-validation. Higher alpha means stronger penalty.
+
+l1_ratio controls the LASSO-vs-Ridge mix:
+l1_ratio = 1.0 -> pure LASSO
+l1_ratio = 0.0 -> pure Ridge-like penalty
+l1_ratio = 0.95 -> mostly LASSO with a little Ridge
+The objective value is useful for your optimization writeup, but do not compare it directly to RMSE/MSE baselines. It includes penalty terms, so it is not the same performance metric.
+
