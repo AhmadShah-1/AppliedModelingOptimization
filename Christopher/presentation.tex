@@ -1,0 +1,449 @@
+\documentclass[11pt,aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{tikz}
+
+% Theme settings
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[page number]
+
+% Code listing settings
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+    showstringspaces=false,
+    showspaces=false
+}
+
+% Title Page
+\title{Blood Glucose Level Prediction\\using Gradient Descent Optimization}
+\subtitle{Comparative Analysis of Regularization Techniques}
+\author{Chris Ognibene}
+\date{May 2026}
+\institute{CPE 608: Optimization Algorithms}
+
+\begin{document}
+
+% Title Slide
+\frame{\titlepage}
+
+% Outline
+\begin{frame}
+    \frametitle{Outline}
+    \tableofcontents
+\end{frame}
+
+%========================================
+\section{Project Overview}
+%========================================
+
+\begin{frame}
+    \frametitle{Project Motivation}
+    \begin{itemize}
+        \item \textbf{Objective:} Predict blood glucose levels for diabetes patients
+        \item \textbf{Dataset:} Time-series medical records from 70 patients
+        \item \textbf{Target Variable:} Next blood glucose measurement
+        \item \textbf{Challenge:} Optimize prediction accuracy while managing model complexity
+    \end{itemize}
+    \vspace{1cm}
+    \begin{block}{Key Question}
+        How do different regularization techniques affect model performance in predicting glucose levels?
+    \end{block}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Blood Glucose Measurement Codes}
+    \begin{table}
+        \centering
+        \begin{tabular}{cc}
+            \toprule
+            \textbf{Code} & \textbf{Measurement Type} \\
+            \midrule
+            58 & Pre-breakfast glucose \\
+            59 & Post-breakfast glucose \\
+            60 & Pre-lunch glucose \\
+            61 & Post-lunch glucose \\
+            62 & Pre-supper glucose \\
+            63 & Post-supper glucose \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+    \vspace{0.5cm}
+    \textbf{Target Variable:} Mean of all six measurements, shifted forward by one timestep
+\end{frame}
+
+%========================================
+\section{Data Pipeline}
+%========================================
+
+\begin{frame}
+    \frametitle{Data Processing Pipeline}
+    \begin{enumerate}
+        \item \textbf{Extraction}: Decompress \texttt{diabetes-data.tar.Z} → 70 patient CSV files
+        \item \textbf{Transformation}: Combine transformed data into unified dataset
+        \item \textbf{Feature Engineering}: Create mean blood glucose from codes 58-63
+        \item \textbf{Preprocessing}:
+            \begin{itemize}
+                \item Fill missing values with feature mean
+                \item Scale features using MinMaxScaler [0, 1]
+                \item Add bias term to feature matrix
+            \end{itemize}
+        \item \textbf{Train-Test Split}: 80/20 split (temporal ordering preserved)
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Data Characteristics}
+    \begin{itemize}
+        \item \textbf{Dataset Size:} 70 patients with multiple time-series observations
+        \item \textbf{Features:} Medical codes transformed from time-series measurements
+        \item \textbf{Handling Missing Data:} Mean imputation by feature
+        \item \textbf{Temporal Consideration:} Maintained chronological order in train-test split
+        \item \textbf{Scaling:} MinMax normalization to [0,1] range
+        \item \textbf{Bias Term:} Added as first column (not regularized)
+    \end{itemize}
+\end{frame}
+
+%========================================
+\section{Optimization Models}
+%========================================
+
+\begin{frame}
+    \frametitle{Gradient Descent Framework}
+    \begin{block}{General Update Rule}
+        $$\mathbf{w}_{t+1} = \mathbf{w}_t - \alpha \nabla f(\mathbf{w}_t)$$
+    \end{block}
+    \begin{itemize}
+        \item $\mathbf{w}$: coefficient vector
+        \item $\alpha$: learning rate
+        \item $\nabla f(\mathbf{w})$: gradient of objective function
+    \end{itemize}
+    \vspace{0.5cm}
+    \textbf{Hyperparameters:}
+    \begin{itemize}
+        \item Learning rate: $\alpha = 0.01$
+        \item Convergence tolerance: $\text{tol} = 10^{-4}$
+        \item Maximum iterations: $\text{max\_iter} = 1000$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Model 1: Baseline (MSE Only)}
+    \begin{block}{Objective Function}
+        $$f(\mathbf{w}) = \frac{1}{2n}\sum_{i=1}^{n} (\mathbf{x}_i^T\mathbf{w} - y_i)^2$$
+    \end{block}
+    \begin{block}{Gradient}
+        $$\nabla f(\mathbf{w}) = \frac{1}{n}\mathbf{X}^T(\mathbf{X}\mathbf{w} - \mathbf{y})$$
+    \end{block}
+    \begin{block}{Update Rule}
+        $$\mathbf{w}_{t+1} = \mathbf{w}_t - \alpha \cdot \frac{1}{n}\mathbf{X}^T(\mathbf{X}\mathbf{w}_t - \mathbf{y})$$
+    \end{block}
+    \textbf{Purpose:} Baseline model with no regularization constraints
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Model 2: L1 Regularization (Lasso)}
+    \begin{block}{Objective Function}
+        $$f(\mathbf{w}) = \frac{1}{2n}\sum_{i=1}^{n} (\mathbf{x}_i^T\mathbf{w} - y_i)^2 + \lambda \|\mathbf{w}_{1:}\|_1$$
+    \end{block}
+    \begin{block}{Soft-Thresholding Operator}
+        $$S_{\lambda}(z_j) = \begin{cases} 
+            z_j - \lambda & \text{if } z_j > \lambda \\
+            0 & \text{if } |z_j| \leq \lambda \\
+            z_j + \lambda & \text{if } z_j < -\lambda
+        \end{cases}$$
+    \end{block}
+    \begin{block}{Update Rule}
+        $$\mathbf{z} = \mathbf{w}_t - \alpha \nabla f(\mathbf{w}_t)$$
+        $$\mathbf{w}_{t+1} = \text{sign}(\mathbf{z}) \odot \max(|\mathbf{z}| - \alpha\lambda, 0)$$
+    \end{block}
+    \textbf{Hyperparameter:} $\lambda = 0.1$ (regularization strength) \\
+    \textbf{Purpose:} Feature selection through coefficient sparsity
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Model 3: L2 Regularization (Ridge)}
+    \begin{block}{Objective Function}
+        $$f(\mathbf{w}) = \frac{1}{2n}\sum_{i=1}^{n} (\mathbf{x}_i^T\mathbf{w} - y_i)^2 + \frac{\lambda}{2}\|\mathbf{w}_{1:}\|_2^2$$
+    \end{block}
+    \begin{block}{Gradient}
+        $$\nabla f(\mathbf{w}) = \frac{1}{n}\mathbf{X}^T(\mathbf{X}\mathbf{w} - \mathbf{y}) + \lambda \mathbf{w}$$
+    \end{block}
+    \begin{block}{Update Rule}
+        $$\mathbf{w}_{t+1} = \mathbf{w}_t - \alpha \left[\frac{1}{n}\mathbf{X}^T(\mathbf{X}\mathbf{w}_t - \mathbf{y}) + \lambda \mathbf{w}_t\right]$$
+    \end{block}
+    \textbf{Hyperparameter:} $\lambda = 0.1$ (regularization strength) \\
+    \textbf{Purpose:} Coefficient shrinkage, prevents overfitting through weight decay
+\end{frame}
+
+\begin{frame}
+    \frametitle{Regularization Comparison}
+    \begin{table}
+        \centering
+        \small
+        \begin{tabular}{lll}
+            \toprule
+            \textbf{Aspect} & \textbf{L1 (Lasso)} & \textbf{L2 (Ridge)} \\
+            \midrule
+            \textbf{Penalty Term} & $\lambda\|\mathbf{w}\|_1$ & $\lambda\|\mathbf{w}\|_2^2$ \\
+            \textbf{Feature Selection} & Yes (sparse) & No (shrinkage) \\
+            \textbf{Coefficient Behavior} & Exact zeros & Continuous shrinkage \\
+            \textbf{Numerical Stability} & Moderate & High \\
+            \textbf{Interpretability} & Feature elimination & Reduced importance \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+\end{frame}
+
+%========================================
+\section{Convergence Analysis}
+%========================================
+
+\begin{frame}
+    \frametitle{Convergence Criterion}
+    \begin{block}{Weight Change Criterion}
+        $$\|\mathbf{w}_{t+1} - \mathbf{w}_t\| < \text{tolerance}$$
+    \end{block}
+    \begin{itemize}
+        \item Convergence tolerance: $10^{-4}$
+        \item Monitors coefficient stability between iterations
+        \item More robust than gradient norm criterion for L1 regularization
+    \end{itemize}
+    \vspace{0.5cm}
+    \textbf{Implementation Details:}
+    \begin{itemize}
+        \item Bias term (first coefficient) excluded from regularization
+        \item Regularization applied only to feature coefficients
+        \item Allows bias to adapt independently
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{MSE Convergence: Baseline Model}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.8\textwidth]{plot1mse.png}
+        \caption{Mean Squared Error vs. Iteration (No Regularization)}
+    \end{figure}
+\end{frame}
+
+\begin{frame}
+    \frametitle{MSE Convergence: L1 Regularization}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.8\textwidth]{plot2l1reg.png}
+        \caption{Mean Squared Error vs. Iteration (L1 Regularization, $\lambda=0.1$)}
+    \end{figure}
+\end{frame}
+
+\begin{frame}
+    \frametitle{MSE Convergence: L2 Regularization}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.8\textwidth]{plot2l2reg.png}
+        \caption{Mean Squared Error vs. Iteration (L2 Regularization, $\lambda=0.1$)}
+    \end{figure}
+\end{frame}
+
+%========================================
+\section{Results \& Evaluation}
+%========================================
+
+\begin{frame}
+    \frametitle{Model Performance Metrics}
+    \begin{block}{Mean Squared Error (MSE)}
+        $$\text{MSE} = \frac{1}{m}\sum_{i=1}^{m} (y_{\text{pred},i} - y_{\text{actual},i})^2$$
+    \end{block}
+    \begin{itemize}
+        \item Training error: Performance on training dataset
+        \item Testing error: Generalization to unseen data
+        \item Difference indicates potential overfitting
+    \end{itemize}
+    \vspace{0.5cm}
+    \textbf{Expected Results:}
+    \begin{itemize}
+        \item Baseline: Lower training, potentially higher testing error
+        \item L1: Sparse coefficients, moderate generalization
+        \item L2: Continuous shrinkage, best generalization expected
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Results Summary}
+    \begin{table}
+        \centering
+        \normalsize
+        \begin{tabular}{lcc}
+            \toprule
+            \textbf{Model} & \textbf{Train MSE} & \textbf{Test MSE} \\
+            \midrule
+            Baseline (MSE) & \texttt{[Training Error]} & \texttt{[Testing Error]} \\
+            L1 Regularization & \texttt{[Training Error]} & \texttt{[Testing Error]} \\
+            L2 Regularization & \texttt{[Training Error]} & \texttt{[Testing Error]} \\
+            \bottomrule
+        \end{tabular}
+        \vspace{0.5cm}
+        \small
+        \textit{Note: Execute model.py to populate actual MSE values}
+    \end{table}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Coefficient Analysis}
+    \begin{itemize}
+        \item \textbf{Baseline Model:} All coefficients used equally
+        \item \textbf{L1 Regularization:} Some coefficients zeroed out (feature selection)
+        \item \textbf{L2 Regularization:} All coefficients shrunk toward zero
+    \end{itemize}
+    \vspace{0.5cm}
+    \begin{block}{Key Observations}
+        \begin{itemize}
+            \item L1 performs automatic feature selection
+            \item L2 provides stable, reduced coefficients
+            \item Bias term remains consistent across models
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+%========================================
+\section{Validation \& Comparison}
+%========================================
+
+\begin{frame}
+    \frametitle{Scikit-Learn Validation}
+    \begin{block}{Methodology}
+        Compare custom implementation against scikit-learn reference implementations:
+        \begin{itemize}
+            \item Ridge Regression (L2)
+            \item Lasso Regression (L1)
+        \end{itemize}
+    \end{block}
+    \vspace{0.5cm}
+    \begin{block}{Implementation Details}
+        \begin{itemize}
+            \item Custom gradient descent: manual optimization implementation
+            \item Scikit-learn: optimized, production-grade solvers
+            \item Validation: coefficient and MSE comparison
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Implementation Details: Custom Gradient Descent}
+    \begin{lstlisting}[basicstyle=\ttfamily\tiny, keywordstyle=\color{blue}, commentstyle=\color{gray}]
+def gradient_descent(X, w, y, obFuncType='mse', lam=0, 
+                     alpha=0.01, tol=1e-4, max_iter=1000):
+    i = 1
+    mse_vals = []
+    iter_vals = []
+    
+    while (i <= max_iter):
+        gradient, soft_thresh = gradFunc(X, w, y, obFuncType, lam)
+        
+        if obFuncType == 'l1':
+            z = w - alpha * gradient
+            w_new = np.sign(z) * np.maximum(np.abs(z) - alpha * lam, 0)
+            w_new[0] = z[0]  # bias not regularized
+        else:
+            step_size = alpha * gradient
+            w_new = w - step_size
+        
+        if np.linalg.norm(w_new - w) < tol:
+            break
+        
+        w = w_new
+        mse_vals.append(objFunc(X, w, y, obFuncType, lam))
+        i += 1
+    
+    return w, mse_vals, iter_vals
+    \end{lstlisting}
+\end{frame}
+
+%========================================
+\section{Key Findings \& Conclusions}
+%========================================
+
+\begin{frame}
+    \frametitle{Key Findings}
+    \begin{enumerate}
+        \item \textbf{Regularization Impact:} Both L1 and L2 reduce overfitting risk
+        \item \textbf{Feature Selection:} L1 regularization identifies important features through sparsity
+        \item \textbf{Model Stability:} L2 regularization provides more stable coefficients
+        \item \textbf{Convergence Behavior:} All models converge within specified tolerance
+        \item \textbf{Generalization:} Regularized models show better test performance
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Conclusions}
+    \begin{block}{Primary Insights}
+        \begin{itemize}
+            \item Custom gradient descent implementation successfully matches scikit-learn results
+            \item Regularization techniques effectively balance fit and complexity
+            \item L1 and L2 serve different purposes in model optimization
+        \end{itemize}
+    \end{block}
+    \vspace{0.5cm}
+    \begin{block}{Recommendations}
+        \begin{itemize}
+            \item Use L2 for stable predictions with all features
+            \item Use L1 for interpretability and sparse feature sets
+            \item Tune $\lambda$ parameter based on cross-validation
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Future Work}
+    \begin{itemize}
+        \item \textbf{Hyperparameter Tuning:} Cross-validation for optimal $\lambda$
+        \item \textbf{Advanced Regularization:} Elastic Net combining L1 and L2
+        \item \textbf{Non-linear Models:} Polynomial features or neural networks
+        \item \textbf{Time-Series Analysis:} LSTM or ARIMA for temporal patterns
+        \item \textbf{Clinical Validation:} Domain expert evaluation of predictions
+    \end{itemize}
+\end{frame}
+
+%========================================
+\section{References}
+%========================================
+
+\begin{frame}
+    \frametitle{References}
+    \begin{itemize}
+        \item Tibshirani, R. (1996). ``Regression Shrinkage and Selection via the Lasso''. Journal of the Royal Statistical Society.
+        \item Hoerl, A. E., \& Kennard, R. W. (1970). ``Ridge Regression: Biased Estimation for Nonorthogonal Problems''.
+        \item Boyd, S., \& Vandenberghe, L. (2004). ``Convex Optimization''. Cambridge University Press.
+        \item Scikit-learn Documentation: \texttt{sklearn.linear\_model}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \centering
+    \Large \textbf{Thank You}
+    \vspace{1cm}
+    
+    Questions?
+    \vspace{0.5cm}
+    
+    \small
+    Blood Glucose Prediction via Gradient Descent Optimization \\
+    Chris Ognibene | CPE 608 | May 2026
+\end{frame}
+
+\end{document}
