@@ -207,7 +207,7 @@ w0 = np.repeat(1, len(X_train.columns)) # first term is bias intercept, remainin
 w_opt, mse_vec, iter_nums = gradient_descent(X_train.values, w0, y_train.values, alpha=0.01) # run gradient descent on our training data 
 
 base_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt, 'y_act' : y_train.values})
-base_train_results['error'] = (base_train_results['y_pred'] - base_train_results['y_act'])**2
+base_train_results['error'] = (base_train_results['y_pred'] - base_train_results['y_act'])
 base_train_results['abs error'] = np.abs((base_train_results['y_pred'] - base_train_results['y_act'])/base_train_results['y_act'])
 
 
@@ -218,7 +218,7 @@ X_test = np.c_[np.ones(len(X_test)), X_test]
 X_test = pd.DataFrame(X_test, columns=np.insert(X.columns, 0, 'bias'))
 
 base_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt, 'y_act' : y_test.values})
-base_test_results['error'] = (base_test_results['y_pred'] - base_test_results['y_act'])**2
+base_test_results['error'] = (base_test_results['y_pred'] - base_test_results['y_act'])
 base_test_results['abs error'] = np.abs((base_test_results['y_pred'] - base_test_results['y_act'])/base_test_results['y_act'])
 
 
@@ -226,14 +226,13 @@ base_test_results['abs error'] = np.abs((base_test_results['y_pred'] - base_test
 w_opt_l1, mse_vec_l1, iter_nums_l1 = gradient_descent(X_train.values, w0, y_train.values, alpha=0.01, obFuncType = 'l1', lam=0.1)
 
 l1_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt_l1, 'y_act' : y_train.values})
-l1_train_results['error'] = (l1_train_results['y_pred'] - l1_train_results['y_act'])**2
+l1_train_results['error'] = (l1_train_results['y_pred'] - l1_train_results['y_act'])
 l1_train_results['abs error'] = np.abs((l1_train_results['y_pred'] - l1_train_results['y_act'])/l1_train_results['y_act'])
 
 
 l1_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt_l1, 'y_act' : y_test.values})
-l1_test_results['error'] = (l1_test_results['y_pred'] - l1_test_results['y_act'])**2
+l1_test_results['error'] = (l1_test_results['y_pred'] - l1_test_results['y_act'])
 l1_test_results['abs error'] = np.abs((l1_test_results['y_pred'] - l1_test_results['y_act'])/l1_test_results['y_act'])
-
 
 
 # set output dir
@@ -248,12 +247,12 @@ output_dir = base_dir / 'output_preGlucoseModel'
 w_opt_l2, mse_vec_l2, iter_nums_l2 = gradient_descent(X_train.values, w0, y_train.values, alpha=0.01, obFuncType = 'l2', rho=0.1)
 
 l2_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt_l2, 'y_act' : y_train.values})
-l2_train_results['error'] = (l2_train_results['y_pred'] - l2_train_results['y_act'])**2
+l2_train_results['error'] = (l2_train_results['y_pred'] - l2_train_results['y_act'])
 l2_train_results['abs error'] = np.abs((l2_train_results['y_pred'] - l2_train_results['y_act'])/l2_train_results['y_act'])
 
 
 l2_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt_l2, 'y_act' : y_test.values})
-l2_test_results['error'] = (l2_test_results['y_pred'] - l2_test_results['y_act'])**2
+l2_test_results['error'] = (l2_test_results['y_pred'] - l2_test_results['y_act'])
 l2_test_results['abs error'] = np.abs((l2_test_results['y_pred'] - l2_test_results['y_act'])/l2_test_results['y_act'])
 
 
@@ -262,11 +261,11 @@ l2_test_results['abs error'] = np.abs((l2_test_results['y_pred'] - l2_test_resul
 w_opt_elastic, mse_vec_elastic, iter_nums_elastic = gradient_descent(X_train.values, w0, y_train.values, alpha=0.01, obFuncType = 'elasticNet', lam=0.1, rho=0.1)
 
 elastic_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt_elastic, 'y_act' : y_train.values})
-elastic_train_results['error'] = (elastic_train_results['y_pred'] - elastic_train_results['y_act'])**2
+elastic_train_results['error'] = (elastic_train_results['y_pred'] - elastic_train_results['y_act'])
 elastic_train_results['abs error'] = np.abs((elastic_train_results['y_pred'] - elastic_train_results['y_act'])/elastic_train_results['y_act'])
 
 elastic_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt_elastic, 'y_act' : y_test.values})
-elastic_test_results['error'] = (elastic_test_results['y_pred'] - elastic_test_results['y_act'])**2
+elastic_test_results['error'] = (elastic_test_results['y_pred'] - elastic_test_results['y_act'])
 elastic_test_results['abs error'] = np.abs((elastic_test_results['y_pred'] - elastic_test_results['y_act'])/elastic_test_results['y_act'])
 
 
@@ -293,10 +292,10 @@ plt.suptitle('MSE Cost Curves') # overall plot title
 fig.savefig(output_dir / 'mse_curves.png')
 
 # MSE results
-mse_res_agg = pd.Series([base_train_results['error'].mean(), base_test_results['error'].mean(), 
-                         l1_train_results['error'].mean(), l1_test_results['error'].mean(), 
-                         l2_train_results['error'].mean(), l2_test_results['error'].mean(), 
-                         elastic_train_results['error'].mean(), elastic_test_results['error'].mean()])
+mse_res_agg = pd.Series([(base_train_results['error']**2).mean(), (base_test_results['error']**2).mean(), 
+                         (l1_train_results['error']**2).mean(), (l1_test_results['error']**2).mean(), 
+                         (l2_train_results['error']**2).mean(), (l2_test_results['error']**2).mean(), 
+                         (elastic_train_results['error']**2).mean(), (elastic_test_results['error']**2).mean()])
 
 mse_res_agg.columns = ['Base Train MSE', 'Base Test MSE', 
                        'L1 Train MSE', 'L1 Test MSE', 
@@ -356,3 +355,84 @@ clf = Lasso(alpha=.01)
 clf.fit(X, y)
 Lasso()
 print(f"Sklearn lasso coefficients: {clf.coef_}")
+
+#######################Diagnostic Plots##############################
+
+base_train = base_train_results[['y_pred', 'error']]
+base_test = base_test_results[['y_pred', 'error']]
+l1_train = l1_train_results[['y_pred', 'error']]
+l1_test = l1_test_results[['y_pred', 'error']]
+l2_train = l2_train_results[['y_pred', 'error']]
+l2_test = l2_test_results[['y_pred', 'error']]
+elastic_train = elastic_train_results[['y_pred', 'error']]
+elastic_test = elastic_test_results[['y_pred', 'error']]
+
+datasets = [base_train, base_test, l1_train, l1_test, l2_train, l2_test, elastic_train, elastic_test]
+plot_titles = ['Base Model (Train)', 'Base Model (Test)',
+                'L1 Model (Train)', 'L1 Model (Test)', 
+                'L2 Model (Train)', 'L2 Model (Test)',
+                'Elastic Net Model (Train)', 'Elastic Net Model (Test)']
+
+
+# Create residual plots 
+fig, ax = plt.subplots(4,2, figsize=(10,10))
+dummy_array = np.zeros((4,2))
+
+k = 0
+
+for i, j in np.argwhere(dummy_array == 0):
+    ax[i][j].scatter('y_pred', 'error', data=datasets[k])
+    ax[i][j].set_title(plot_titles[k])
+    ax[i][j].set_xlabel('Predictions')
+    ax[i][j].set_ylabel('Residuals')
+    k += 1
+fig.suptitle("Residual Plots")
+fig.tight_layout()
+fig.savefig(output_dir / 'residual_plots.png')
+
+
+# QQ Plots
+import statsmodels.api as sm
+
+fig, ax = plt.subplots(4,2, figsize=(10,10))
+k = 0
+
+for i, j in np.argwhere(dummy_array == 0):
+    sm.qqplot(datasets[k]['error'], line='45', fit=True, ax=ax[i, j])
+    ax[i][j].set_title(plot_titles[k])
+    k += 1
+fig.suptitle("Normal Q-Q Plots")
+fig.tight_layout()
+fig.savefig(output_dir / 'qq_plots.png')
+
+# Multi-collinearity check
+# Quick check for Multicollinearity (VIF)
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+vif_data = pd.DataFrame()
+vif_data["feature"] = X_train.columns[1:]
+vif_data["VIF"] = [variance_inflation_factor(X_train.iloc[:, 1:].values, i) for i in range(len(X_train.columns[1:]))]
+vif_data
+
+# look at the p-values of coefficients in the final models 
+# look at the R2 values of the final models 
+# p-values: t-stat --> apply the inverse CDF --> p-value
+
+# Cook's Distance  (DRAFT ONLY)
+# References: https://www.statology.org/cooks-distance-python/
+# Leverage: https://en.wikipedia.org/wiki/Leverage_(statistics)
+
+#hat_matrix = X_train @ np.linalg.inv(X_train.T @ X_train) @ X_train.T # has perfect multi-collinearity
+#hat_matrix = X_train @ np.linalg.pinv(X_train.T @ X_train) @ X_train.T # has perfect multi-collinearity
+##H = X_with_const @ np.linalg.inv(X_with_const.T @ X_with_const) @ X_with_const.T
+
+#H = (X_train @ np.linalg.pinv(X_train.T @ X_train)).T @ X_train
+#leverage = np.diagonal(H)
+
+def cooks_distance(resid, p, mse, lev):
+    return (resid**2 / (p * mse)) * (lev/ (1-lev)**2)
+
+#cooks_dist = cooks_distance(base_train_results['error'], len(X_train.columns[1:]),
+#                            (base_train_results['error']**2).mean(), leverage[0])
+
+# Partial Regression Plots
+from statsmodels.graphics.regressionplots import plot_partregress_grid
