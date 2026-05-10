@@ -322,13 +322,13 @@ l2_test_results['error'] = (l2_test_results['y_pred'] - l2_test_results['y_act']
 #print(f"L2 Regularization Model Coefficients: {w_opt_l2}")
 
 # compile the features and optimal weights for the base model
-pd.DataFrame({'Feature' : X_train.columns, 'w_opt' : w_opt}).to_csv('opt_weights_base_model.csv')
+#pd.DataFrame({'Feature' : X_train.columns, 'w_opt' : w_opt}).to_csv('opt_weights_base_model.csv')
 
 # compile the features and optimal weights for the L1 model
-pd.DataFrame({'Feature' : X_train.columns, 'w_opt' : w_opt_l1}).to_csv('opt_weights_l1_model.csv')
+#pd.DataFrame({'Feature' : X_train.columns, 'w_opt' : w_opt_l1}).to_csv('opt_weights_l1_model.csv')
 
 # compile the features and optimal weights for the L2 model
-pd.DataFrame({'Feature' : X_train.columns, 'w_opt' : w_opt_l2}).to_csv('opt_weights_l2_model.csv')
+#pd.DataFrame({'Feature' : X_train.columns, 'w_opt' : w_opt_l2}).to_csv('opt_weights_l2_model.csv')
 
 
 # compile MSE results
