@@ -185,7 +185,7 @@ final_data = final_data.dropna()
 
 # create the training and target columns 
 final_data = final_data.sort_values(by='datetime', ascending=True)
-X = final_data.drop(['58', '59', '60', '61', '62', '63', 'target'], axis=1)
+X = final_data.drop(['58', '59', '60', '61', '62', '63', 'mean', 'target'], axis=1)
 #X.rename(columns={0 : 'bias'}, inplace=True)
 y = final_data['target']
 
@@ -214,16 +214,10 @@ w0 = np.repeat(1, len(X_train.columns)) # first term is bias intercept, remainin
 # Optimize core MSE function 
 w_opt, mse_vec, iter_nums = gradient_descent(X_train.values, w0, y_train.values, alpha=0.01) # run gradient descent on our training data 
 
-plt.figure(figsize=(8,4))
-plt.title('MSE vs. Iteration')
-plt.xlabel('Iteration'); plt.ylabel('MSE')
-plt.plot(iter_nums, mse_vec)
-plt.savefig('plot1mse.png')
-
-train_results = pd.DataFrame({'y_pred' : X_train @ w_opt, 
+base_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt, 
                               'y_act' : y_train.values})
-train_results['error'] = (train_results['y_pred'] - train_results['y_act'])**2
-print(f"Training Error (OG Model): {train_results['error'].mean()}")
+base_train_results['error'] = (base_train_results['y_pred'] - base_train_results['y_act'])**2
+#print(f"Training Error (OG Model): {base_train_results['error'].mean()}")
 
 
 # scale test data set but with respect to the training data
@@ -233,15 +227,64 @@ X_test = np.c_[np.ones(len(X_test)), X_test]
 X_test = pd.DataFrame(X_test, columns=np.insert(X.columns, 0, 'bias'))
 
 
-test_results = pd.DataFrame({'y_pred' : X_test @ w_opt, 
+base_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt, 
                               'y_act' : y_test.values})
-test_results['error'] = (test_results['y_pred'] - test_results['y_act'])**2
-test_results['error'].mean() 
-print(f"Testing Error (OG Model): {test_results['error'].mean()}")
+base_test_results['error'] = (base_test_results['y_pred'] - base_test_results['y_act'])**2
+#print(f"Testing Error (OG Model): {test_results['error'].mean()}")
 
 
 # Optimize MSE function with Lasso Regularization (L1)
 w_opt_l1, mse_vec_l1, iter_nums_l1 = gradient_descent(X_train.values, w0, y_train.values, alpha=0.01, obFuncType = 'l1', lam=0.1)
+
+l1_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt_l1, 
+                              'y_act' : y_train.values})
+l1_train_results['error'] = (l1_train_results['y_pred'] - l1_train_results['y_act'])**2
+#print(f"Training Error (L1 Reg): {train_results['error'].mean()}")
+
+
+# scale test data set but with respect to the training data
+l1_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt_l1, 
+                              'y_act' : y_test.values})
+l1_test_results['error'] = (l1_test_results['y_pred'] - l1_test_results['y_act'])**2
+l1_test_results['error'].mean() 
+#print(f"Testing Error (L1 Reg): {test_results['error'].mean()}")
+
+
+
+# Optimize MSE function with Ridge Regularization (L2)
+w_opt_l2, mse_vec_l2, iter_nums_l2 = gradient_descent(X_train.values, w0, y_train.values, alpha=0.01, obFuncType = 'l2', lam=0.1)
+
+
+# plot MSE curves
+
+fig, ax = plt.subplots(2,2, figsize=(10,10))
+
+ax[0][0].plot(iter_nums, mse_vec)
+ax[0][1].plot(iter_nums_l1, mse_vec_l1)
+ax[1][0].plot(iter_nums_l2, mse_vec_l2)
+#ax[1][1].plot(iter_nums_l2, mse_vec_l2) #elastic net (TBD)
+
+
+# plot customizations
+ax[0][0].set_title('Base Model: MSE')
+ax[0][1].set_title('L1 Model: MSE')
+ax[1][0].set_title('L2 Model: MSE')
+
+ax[0][0].set_xlabel('Iteration'); ax[0][0].set_ylabel('MSE')
+ax[0][1].set_xlabel('Iteration'); ax[0][1].set_ylabel('MSE')
+ax[1][0].set_xlabel('Iteration'); ax[1][0].set_ylabel('MSE')
+
+plt.suptitle('MSE Cost Curves') # overall plot title 
+fig.savefig('mse_curves.png')
+
+
+
+"""
+plt.figure(figsize=(8,4))
+plt.title('MSE vs. Iteration')
+plt.xlabel('Iteration'); plt.ylabel('MSE')
+plt.plot(iter_nums, mse_vec)
+plt.savefig('plot1mse.png')
 
 plt.figure(figsize=(8,4))
 plt.title('MSE vs. Iteration (with L1 Regularization)')
@@ -249,53 +292,75 @@ plt.xlabel('Iteration'); plt.ylabel('MSE')
 plt.plot(iter_nums_l1, mse_vec_l1)
 plt.savefig('plot2l1reg.png')
 
-train_results = pd.DataFrame({'y_pred' : X_train @ w_opt_l1, 
-                              'y_act' : y_train.values})
-train_results['error'] = (train_results['y_pred'] - train_results['y_act'])**2
-print(f"Training Error (L1 Reg): {train_results['error'].mean()}")
-
-
-# scale test data set but with respect to the training data
-test_results = pd.DataFrame({'y_pred' : X_test @ w_opt_l1, 
-                              'y_act' : y_test.values})
-test_results['error'] = (test_results['y_pred'] - test_results['y_act'])**2
-test_results['error'].mean() 
-print(f"Testing Error (L1 Reg): {test_results['error'].mean()}")
-
-
-
-# Optimize MSE function with Ridge Regularization (L2)
-w_opt_l2, mse_vec_l2, iter_nums_l2 = gradient_descent(X_train.values, w0, y_train.values, alpha=0.01, obFuncType = 'l2', lam=0.1)
 
 plt.figure(figsize=(8,4))
 plt.title('MSE vs. Iteration (with L2 Regularization)')
 plt.xlabel('Iteration'); plt.ylabel('MSE')
 plt.plot(iter_nums_l2, mse_vec_l2)
 plt.savefig('plot2l2reg.png')
+"""
 
 #print("No reg:", w_opt)
 #print("L2 reg:", w_opt_l2)
 
-train_results = pd.DataFrame({'y_pred' : X_train @ w_opt_l2, 
+l2_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt_l2, 
                               'y_act' : y_train.values})
-train_results['error'] = (train_results['y_pred'] - train_results['y_act'])**2
-train_results['error'].mean()
-print(f"Training Error (L2 Reg Model): {train_results['error'].mean()}")
+l2_train_results['error'] = (l2_train_results['y_pred'] - l2_train_results['y_act'])**2
+#print(f"Training Error (L2 Reg Model): {train_results['error'].mean()}")
 
 
 # scale test data set but with respect to the training data
-test_results = pd.DataFrame({'y_pred' : X_test @ w_opt_l2, 
+l2_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt_l2, 
                               'y_act' : y_test.values})
-test_results['error'] = (test_results['y_pred'] - test_results['y_act'])**2
-test_results['error'].mean() 
-print(f"Testing Error (L2 Reg Model): {test_results['error'].mean()}")
+l2_test_results['error'] = (l2_test_results['y_pred'] - l2_test_results['y_act'])**2
+#print(f"Testing Error (L2 Reg Model): {test_results['error'].mean()}")
 
 
 ################ Print coefficients ################################
-print(f"OG Model Coefficients: {w_opt}")
-print(f"L1 Regularization Model Coefficients: {w_opt_l1}")
-print(f"L2 Regularization Model Coefficients: {w_opt_l2}")
+#print(f"OG Model Coefficients: {w_opt}")
+#print(f"L1 Regularization Model Coefficients: {w_opt_l1}")
+#print(f"L2 Regularization Model Coefficients: {w_opt_l2}")
 
+# compile the features and optimal weights for the base model
+pd.DataFrame({'Feature' : X_train.columns, 'w_opt' : w_opt}).to_csv('opt_weights_base_model.csv')
+
+# compile the features and optimal weights for the L1 model
+pd.DataFrame({'Feature' : X_train.columns, 'w_opt' : w_opt_l1}).to_csv('opt_weights_l1_model.csv')
+
+# compile the features and optimal weights for the L2 model
+pd.DataFrame({'Feature' : X_train.columns, 'w_opt' : w_opt_l2}).to_csv('opt_weights_l2_model.csv')
+
+
+# compile MSE results
+mse_res_agg = pd.Series([base_train_results['error'].mean(), base_test_results['error'].mean(), 
+                         l1_train_results['error'].mean(), l1_test_results['error'].mean(), 
+                         l2_train_results['error'].mean(), l2_test_results['error'].mean()])
+
+mse_res_agg.columns = ['Base Train MSE', 'Base Test MSE', 'L1 Train MSE', 'L1 Test MSE', 'L2 Train MSE', 'L2 Test MSE']
+#mse_res_agg.to_csv('mse_results.csv')
+
+# compute RMSE
+rmse_res_agg = np.sqrt(mse_res_agg)
+rmse_res_agg.columns = ['Base Train RMSE', 'Base Test RMSE', 'L1 Train RMSE', 'L1 Test RMSE', 'L2 Train RMSE', 'L2 Test RMSE']
+#rmse_res_agg.to_csv('rmse_results.csv')
+
+# compute MAPE
+# TBD
+
+# combine metrics
+metrics_df = pd.concat([mse_res_agg, rmse_res_agg], axis=1)
+metrics_df.index = ['Base Model (Train)', 'Base Model (Test)', 
+                    'L1 Model (Train)', 'L1 Model (Test)', 
+                    'L2 Model (Train)', 'L1 Model (Test)'] 
+metrics_df.columns = ['MSE', 'RMSE']
+metrics_df.to_csv('metrics.csv')
+
+# compile coefficients for each model 
+
+coeff_df = pd.DataFrame(np.concatenate((w_opt.reshape(-1,1), w_opt_l1.reshape(-1,1), w_opt_l2.reshape(-1,1)), axis=1))
+coeff_df.index = X_train.columns
+coeff_df.columns = ['Base Model', 'L1 Model', 'L2 Model']
+coeff_df.to_csv('opt_coefficients.csv')
 
 ################ CHECKS ONLY ########################################
 # check against sklearn ridge regression
