@@ -1,8 +1,0 @@
-\beamer@sectionintoc {1}{Project Overview}{3}{0}{1}
-\beamer@sectionintoc {2}{Data Pipeline}{5}{0}{2}
-\beamer@sectionintoc {3}{Optimization Models}{7}{0}{3}
-\beamer@sectionintoc {4}{Convergence Analysis}{12}{0}{4}
-\beamer@sectionintoc {5}{Results \& Evaluation}{16}{0}{5}
-\beamer@sectionintoc {6}{Validation \& Comparison}{19}{0}{6}
-\beamer@sectionintoc {7}{Key Findings \& Conclusions}{21}{0}{7}
-\beamer@sectionintoc {8}{References}{24}{0}{8}
