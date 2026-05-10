@@ -4,6 +4,7 @@ import numpy as np
 import os
 from pathlib import Path
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+import datetime
 
 # import final_data from directory final_data
 base_path = Path("final_project_CPE608").parent
@@ -162,26 +163,76 @@ def gradient_descent(X, w, y, obFuncType='mse', lam=0, rho=0, alpha=0.01, tol=1e
 all_glucose_cols = np.arange(58, 65).astype(str)
 pre_glucose_cols = np.arange(58, 65, 2).astype(str)
 
+
 final_data['datetime'] = pd.to_datetime(final_data['Date'] + ' ' + final_data['Time'], errors='coerce')
-#final_data['datetime'].unique() #14741 unique observations
+
 final_data = pd.pivot_table(final_data, index=['PATIENT_ID', 'datetime'], columns='Code', values='Value')
+#final_data = pd.pivot_table(final_data, index=['PATIENT_ID', 'Date', 'Time'], columns='Code', values='Value')
+
+# convert to time and drop invalid time
+#final_data['Time'] = pd.to_datetime(final_data['Time'], errors='coerce').dropna().apply(lambda x: x.time()) # drop NaT
+
+"""
+# compute the mean of each code by Patient and Day
+pd.pivot_table(final_data.drop(['datetime'], axis=1), 
+               index=['PATIENT_ID', 'Date', 'Time'],
+               columns='Code', 
+               values='Value').reset_index().drop('Time', axis=1).groupby(['PATIENT_ID', 'Date']).agg(np.mean, axis=0)
+"""
+
+"""
+final_data = pd.pivot_table(final_data, index=['PATIENT_ID', 'Date', 'Time'], columns='Code', values='Value').fillna(
+    pd.pivot_table(final_data.drop(['datetime'], axis=1), 
+                   index=['PATIENT_ID', 'Date', 'Time'],
+                   columns='Code', 
+                   values='Value').reset_index().drop('Time', axis=1).groupby(['PATIENT_ID', 'Date']).agg(np.mean, axis=0)
+    ).sort_index(ascending=True)
+"""
+
+final_data = final_data.fillna(
+    final_data.groupby(['PATIENT_ID']).agg(np.mean, axis=0)
+    ).sort_index(ascending=True)
+
+
+#final_data = final_data.reset_index()
+
+final_data.columns = final_data.columns.astype(str)
 
 # fill missing recordings with the mean of the code
-final_data = final_data.fillna(final_data.mean())
+#final_data = final_data.fillna(final_data.mean())
+
 
 # create target variable
-final_data.columns = final_data.columns.astype(str)
-#final_data['mean'] = final_data[['58', '59', '60', '61', '62', '63']].mean(axis=1)
-final_data['mean'] = final_data[pre_glucose_cols].mean(axis=1)
-final_data['target'] = final_data['mean'].shift(-1) 
-final_data = final_data.dropna()
+#final_data.columns = final_data.columns.astype(str)
+#final_data['mean'] = final_data[['58', '59', '60', '61', '62', '63']].mean(axis=1) # average of all pre/post glucose measurements
+final_data['mean'] = final_data[pre_glucose_cols].mean(axis=1) # average of only pre glucose measuremments
+
+final_data['target'] = final_data['mean'].shift(-1)  # lag across all patients
+#final_data['target'] = final_data.groupby(['PATIENT_ID', 'Date'])['mean'].shift(-1)  # lag across each patient
+
+final_data = final_data.fillna(final_data.mode().loc[0])
+
+
+
+#final_data = final_data.dropna()
+
+
+# drop rows where target is N/A (no measurements)
+#final_data = final_data.drop(final_data[final_data['target'].isna()].index, axis=0)
 
 # create the training and target columns 
-final_data = final_data.sort_values(by='datetime', ascending=True)
+#final_data = final_data.sort_values(by='datetime', ascending=True)
 #X = final_data.drop(['58', '59', '60', '61', '62', '63', 'mean', 'target'], axis=1)
-
 X = final_data.drop(np.insert(pre_glucose_cols, -1, ['mean', 'target']), axis=1)
 y = final_data['target']
+
+
+
+# DRAFT
+#drop_X_na_indices = X[X.isna().all(axis=1)].index
+#X = X.drop(drop_X_na_indices, axis=0)
+#y = y.drop(drop_X_na_indices)
+
 
 # split data into train-test split
 from sklearn.model_selection import train_test_split
@@ -336,6 +387,7 @@ coeff_df.index = X_train.columns
 coeff_df.columns = ['Base Model', 'L1 Model', 'L2 Model', 'Elastic Net Model']
 coeff_df.to_csv(output_dir / 'opt_coefficients.csv')
 
+"""
 ################ CHECKS ONLY ########################################
 # check against sklearn ridge regression
 from sklearn.linear_model import Ridge
@@ -355,6 +407,7 @@ clf = Lasso(alpha=.01)
 clf.fit(X, y)
 Lasso()
 print(f"Sklearn lasso coefficients: {clf.coef_}")
+"""
 
 #######################Diagnostic Plots##############################
 
