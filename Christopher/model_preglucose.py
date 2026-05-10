@@ -208,6 +208,8 @@ w_opt, mse_vec, iter_nums = gradient_descent(X_train.values, w0, y_train.values,
 
 base_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt, 'y_act' : y_train.values})
 base_train_results['error'] = (base_train_results['y_pred'] - base_train_results['y_act'])**2
+base_train_results['abs error'] = np.abs((base_train_results['y_pred'] - base_train_results['y_act'])/base_train_results['y_act'])
+
 
 # scale test data set but with respect to the training data
 X_test = pd.DataFrame(X_test, columns=X.columns)
@@ -217,15 +219,22 @@ X_test = pd.DataFrame(X_test, columns=np.insert(X.columns, 0, 'bias'))
 
 base_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt, 'y_act' : y_test.values})
 base_test_results['error'] = (base_test_results['y_pred'] - base_test_results['y_act'])**2
+base_test_results['abs error'] = np.abs((base_test_results['y_pred'] - base_test_results['y_act'])/base_test_results['y_act'])
+
 
 # Optimize MSE function with Lasso Regularization (L1)
 w_opt_l1, mse_vec_l1, iter_nums_l1 = gradient_descent(X_train.values, w0, y_train.values, alpha=0.01, obFuncType = 'l1', lam=0.1)
 
 l1_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt_l1, 'y_act' : y_train.values})
 l1_train_results['error'] = (l1_train_results['y_pred'] - l1_train_results['y_act'])**2
+l1_train_results['abs error'] = np.abs((l1_train_results['y_pred'] - l1_train_results['y_act'])/l1_train_results['y_act'])
+
 
 l1_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt_l1, 'y_act' : y_test.values})
 l1_test_results['error'] = (l1_test_results['y_pred'] - l1_test_results['y_act'])**2
+l1_test_results['abs error'] = np.abs((l1_test_results['y_pred'] - l1_test_results['y_act'])/l1_test_results['y_act'])
+
+
 
 # set output dir
 base_dir = Path("Christopher").parent
@@ -240,9 +249,13 @@ w_opt_l2, mse_vec_l2, iter_nums_l2 = gradient_descent(X_train.values, w0, y_trai
 
 l2_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt_l2, 'y_act' : y_train.values})
 l2_train_results['error'] = (l2_train_results['y_pred'] - l2_train_results['y_act'])**2
+l2_train_results['abs error'] = np.abs((l2_train_results['y_pred'] - l2_train_results['y_act'])/l2_train_results['y_act'])
+
 
 l2_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt_l2, 'y_act' : y_test.values})
 l2_test_results['error'] = (l2_test_results['y_pred'] - l2_test_results['y_act'])**2
+l2_test_results['abs error'] = np.abs((l2_test_results['y_pred'] - l2_test_results['y_act'])/l2_test_results['y_act'])
+
 
 
 # Optimize MSE function with Elastic Net Regularization
@@ -250,9 +263,11 @@ w_opt_elastic, mse_vec_elastic, iter_nums_elastic = gradient_descent(X_train.val
 
 elastic_train_results = pd.DataFrame({'y_pred' : X_train @ w_opt_elastic, 'y_act' : y_train.values})
 elastic_train_results['error'] = (elastic_train_results['y_pred'] - elastic_train_results['y_act'])**2
+elastic_train_results['abs error'] = np.abs((elastic_train_results['y_pred'] - elastic_train_results['y_act'])/elastic_train_results['y_act'])
 
 elastic_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt_elastic, 'y_act' : y_test.values})
 elastic_test_results['error'] = (elastic_test_results['y_pred'] - elastic_test_results['y_act'])**2
+elastic_test_results['abs error'] = np.abs((elastic_test_results['y_pred'] - elastic_test_results['y_act'])/elastic_test_results['y_act'])
 
 
 # plot MSE curves
@@ -277,7 +292,7 @@ ax[1][1].set_xlabel('Iteration'); ax[1][1].set_ylabel('MSE')
 plt.suptitle('MSE Cost Curves') # overall plot title 
 fig.savefig(output_dir / 'mse_curves.png')
 
-# compile MSE results
+# MSE results
 mse_res_agg = pd.Series([base_train_results['error'].mean(), base_test_results['error'].mean(), 
                          l1_train_results['error'].mean(), l1_test_results['error'].mean(), 
                          l2_train_results['error'].mean(), l2_test_results['error'].mean(), 
@@ -288,20 +303,31 @@ mse_res_agg.columns = ['Base Train MSE', 'Base Test MSE',
                        'L2 Train MSE', 'L2 Test MSE', 
                        'Elastic Net Train MSE', 'Elastic Net Test MSE']
 
-# compute RMSE
+# RMSE results
 rmse_res_agg = np.sqrt(mse_res_agg)
 rmse_res_agg.columns = ['Base Train RMSE', 'Base Test RMSE', 
                         'L1 Train RMSE', 'L1 Test RMSE', 
                         'L2 Train RMSE', 'L2 Test RMSE', 
                         'Elastic Net Train RMSE', 'Elastic Net Test RMSE']
 
+# MAPE results
+mape_res_agg = pd.Series([base_train_results['abs error'].mean(), base_test_results['abs error'].mean(), 
+                         l1_train_results['abs error'].mean(), l1_test_results['abs error'].mean(), 
+                         l2_train_results['abs error'].mean(), l2_test_results['abs error'].mean(), 
+                         elastic_train_results['abs error'].mean(), elastic_test_results['abs error'].mean()])
+mape_res_agg.columns = ['Base Train MAPE', 'Base Test MAPE', 
+                        'L1 Train MAPE', 'L1 Test MAPE', 
+                        'L2 Train MAPE', 'L2 Test MAPE', 
+                        'Elastic Net Train MAPE', 'Elastic Net Test MAPE']
+
+
 # combine metrics
-metrics_df = pd.concat([mse_res_agg, rmse_res_agg], axis=1)
+metrics_df = pd.concat([mse_res_agg, rmse_res_agg, mape_res_agg], axis=1)
 metrics_df.index = ['Base Model (Train)', 'Base Model (Test)', 
                     'L1 Model (Train)', 'L1 Model (Test)', 
                     'L2 Model (Train)', 'L2 Model (Test)', 
                     'Elastic Net Model (Train)', 'Elastic Net Model (Test)'] 
-metrics_df.columns = ['MSE', 'RMSE']
+metrics_df.columns = ['MSE', 'RMSE', 'MAPE']
 metrics_df.to_csv(output_dir / 'metrics.csv')
 
 # compile coefficients for each model 
