@@ -207,11 +207,10 @@ final_data.columns = final_data.columns.astype(str)
 #final_data['mean'] = final_data[['58', '59', '60', '61', '62', '63']].mean(axis=1) # average of all pre/post glucose measurements
 final_data['mean'] = final_data[pre_glucose_cols].mean(axis=1) # average of only pre glucose measuremments
 
-final_data['target'] = final_data['mean'].shift(-1)  # lag across all patients
-#final_data['target'] = final_data.groupby(['PATIENT_ID', 'Date'])['mean'].shift(-1)  # lag across each patient
+#final_data['target'] = final_data['mean'].shift(-1)  # lag across all patients
+final_data['target'] = final_data.groupby(['PATIENT_ID'])['mean'].shift(-1) # lag across each patient
 
 final_data = final_data.fillna(final_data.mode().loc[0])
-
 
 
 #final_data = final_data.dropna()
