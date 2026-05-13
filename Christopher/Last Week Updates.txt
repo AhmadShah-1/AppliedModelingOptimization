@@ -1,0 +1,21 @@
+Last Week Updates:
+
+Tuesday: Code Clean-up
+1. Re-ran extraction data scripts and model code to resolve any unexpected bugs. 
+
+2. Created the "Cleaned Code" folder to store working finalized code. 
+
+3. Updated Readme file to reflect the latest updates and removed outdated items. 
+
+4. Reorganized files: 
+  Store input data in a data/ folder 
+  Store output files in a output/ folder 
+
+5. Clean up all legacy / tech debt code: in progress [left draft potential analysis code, but can delete if want] 
+
+=======================================
+Wed:
+Make sure our results have units. 
+Use Appropriate rounding. 
+Generate requirements.txt file 
+Optional: Create a main.py file (i.e., The central entry point that orchestrates the data loading, model execution, and result reporting).
