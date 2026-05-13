@@ -1,73 +1,99 @@
-# final_project_CPE608
+# Blood Glucose Prediction with Regularized Gradient Descent
 
-A machine learning project for predicting blood glucose levels using gradient descent optimization with various regularization techniques.
+A machine learning project implementing custom gradient descent optimization algorithms to predict blood glucose levels from diabetes patient data. Compares baseline MSE, L1 (Lasso), L2 (Ridge), and Elastic Net regularization techniques.
 
 ## Project Overview
 
-This project implements custom gradient descent optimization algorithms to build predictive models for blood glucose levels from diabetes patient data. The implementation compares three modeling approaches:
-- **Baseline Model**: Standard MSE optimization
-- **L1 Regularization (Lasso)**: Feature selection through L1 penalty
-- **L2 Regularization (Ridge)**: Coefficient shrinkage through L2 penalty
+This project builds predictive models for blood glucose levels using custom implementations of gradient descent with various regularization methods. The models use pre-meal blood glucose measurements to predict the next measurement and are evaluated using MSE, RMSE, and MAPE metrics.
 
-## Files
+## Files & Data Processing
 
-### Data Processing
-- **`extract_data.py`**: Extracts and decompresses the diabetes dataset from `diabetes-data.tar.Z`, creates individual patient CSV files, and transforms them for further analysis.
-- **`data_analysis.py`**: Consolidates transformed patient data files into a single cleaned dataset (`final_cleaned_data.csv`) for model training.
+### Data Files
+- **`data/diabetes.zip`**: Source compressed diabetes dataset
+- **`data/extracted_data/`**: Individual extracted patient CSV files from the compressed archive (tab-separated format with Date, Time, Code, Value columns)
+- **`data/transformed_data/`**: Patient-specific transformed data (70 patient files for rows 1-70 of extracted data)
+- **`data/final_data/final_cleaned_data.csv`**: Consolidated dataset ready for modeling with all 70 patients combined
 
-### Model Training
-- **`model.py`**: Core implementation of:
-  - Custom gradient descent optimizer with support for MSE, L1, and L2 regularization
-  - Data preprocessing (MinMax scaling, train-test split)
-  - Model training and evaluation
-  - Comparison with scikit-learn implementations (Ridge and Lasso)
+### Code Files
 
-### Visualizations
-- **`plot1mse.png`**: MSE convergence curve for baseline model
-- **`plot2l1reg.png`**: MSE convergence curve with L1 regularization
-- **`plot2l2reg.png`**: MSE convergence curve with L2 regularization
+#### `extract_data.py`
+Decompresses and extracts the diabetes dataset:
+- Reads from `data/diabetes/diabetes-data.tar.Z`
+- Extracts individual patient records and saves as CSV files to `data/extracted_data/`
+- Transforms the first 70 files (patient data) by adding PATIENT_ID column
+- Saves transformed data to `data/transformed_data/` with `_transformed.csv` suffix
 
-## Key Features
+#### `data_analysis.py`
+Consolidates transformed patient data:
+- Reads all transformed data files from `data/transformed_data/`
+- Concatenates all 70 patient files row-wise
+- Saves consolidated dataset to `data/final_data/final_cleaned_data.csv`
+
+#### `model_preglucose.py`
+Implements custom gradient descent optimization and model evaluation:
+- Loads `data/final_data/final_cleaned_data.csv`
+- Processes data:
+  - Creates datetime from Date and Time columns
+  - Pivots data by Code (medical codes) as columns
+  - Fills missing values using patient-level averages
+- Creates target variable:
+  - Uses pre-meal blood glucose codes (58, 60, 62) - codes at even indices
+  - Averages pre-meal measurements as feature
+  - Shifts by -1 to create next-measurement target for each patient
+- Feature engineering:
+  - Drops pre-meal glucose codes and mean/target columns
+  - Fills remaining missing values with mode
+  - Scales features using MinMaxScaler (fit on training data)
+  - Adds bias term
+- Trains four models:
+  1. **Base Model**: MSE only (no regularization)
+  2. **L1 Model**: MSE + L1 regularization (lam=0.1) with soft-thresholding
+  3. **L2 Model**: MSE + L2 regularization (rho=0.1)
+  4. **Elastic Net**: MSE + L1 (lam=0.1) + L2 (rho=0.1) regularization
+- All models use 80/20 train-test split (no shuffle) with learning rate alpha=0.01
+- Generates output files in `output/` directory
+
+### Output Files
+- **`output/mse_curves.png`**: 2×2 plot showing MSE convergence curves for all four models
+- **`output/residual_plots.png`**: 4×2 residual plots (predictions vs. residuals) for train/test of each model
+- **`output/qq_plots.png`**: 4×2 Q-Q plots checking normality of residuals
+- **`output/metrics.csv`**: Performance metrics (MSE, RMSE, MAPE) for each model on train/test data
+- **`output/opt_coefficients.csv`**: Optimized coefficients for each model across all features
+
+## Blood Glucose Measurement Codes
+
+Medical codes in dataset:
+- **58**: Pre-breakfast blood glucose
+- **59**: Post-breakfast blood glucose
+- **60**: Pre-lunch blood glucose
+- **61**: Post-lunch blood glucose
+- **62**: Pre-supper blood glucose
+- **63**: Post-supper blood glucose
+- **64**: Pre-snack blood glucose
+
+The model uses **pre-meal codes (58, 60, 62)** only for the feature representation.
+
+## Algorithm Details
 
 ### Gradient Descent Implementation
-- Supports multiple objective function types (MSE, L1, L2)
-- Configurable learning rate, convergence tolerance, and maximum iterations
-- Soft-thresholding for L1 regularization
-- Bias term exclusion from regularization
+- **Objective Functions**:
+  - MSE: `(1/2) * mean((X @ w - y)^2)`
+  - L1: MSE + `lam * ||w[1:]||_1`
+  - L2: MSE + `(1/2) * rho * sum(w[1:]^2)`
+  - Elastic Net: MSE + L1 + L2
+- **Soft-Thresholding**: Applied for L1/Elastic Net regularization
+- **Bias Exclusion**: Regularization applied only to feature coefficients, not bias term
+- **Convergence**: Stops when `||w_new - w|| < 1e-4` or reaches max 1000 iterations
 
 ### Data Pipeline
-1. Extract compressed diabetes patient records
-2. Transform time-series medical codes into features
-3. Create target variable (next blood glucose measurement)
-4. Scale features using MinMaxScaler
-5. Split into train/test sets (80/20 split)
-
-### Model Evaluation
-- Training and testing error metrics
-- Coefficient visualization across regularization methods
-- Validation against scikit-learn implementations
-
-## Usage
-
-```bash
-# Step 1: Extract and process data
-python extract_data.py
-python data_analysis.py
-
-# Step 2: Train models and generate results
-python model.py
-```
-
-## Data
-
-The project uses diabetes patient data containing:
-- **Codes 58-63**: Blood glucose measurements (pre/post meals)
-  - 58: Pre-breakfast
-  - 59: Post-breakfast
-  - 60: Pre-lunch
-  - 61: Post-lunch
-  - 62: Pre-supper
-  - 63: Post-supper
+1. Extract and decompress diabetes patient records
+2. Add patient identifiers and transform to standard format
+3. Consolidate all patient data into single file
+4. Pivot codes as features, create target variable (next pre-meal glucose)
+5. Handle missing values via patient-level mean imputation
+6. MinMax scale features using training data statistics
+7. Split into 80% train / 20% test (preserves temporal order)
+8. Train models and evaluate metrics
 
 ## Dependencies
 
@@ -75,12 +101,24 @@ The project uses diabetes patient data containing:
 - numpy
 - matplotlib
 - scikit-learn
+- statsmodels
+
+## Usage
+
+```bash
+# Step 1: Extract and process raw data
+python extract_data.py
+python data_analysis.py
+
+# Step 2: Train models and generate results
+python model_preglucose.py
+```
 
 ## Author
 
 Chris Ognibene  
-Date: May 2026
+May 2026
 
 ## Notes
 
-This is a personal educational project for CPE608, implementing optimization algorithms from scratch to understand the mechanics of regularized regression.
+This is an educational project for CPE608, implementing regularized regression optimization algorithms from scratch to understand the mechanics of gradient descent and various regularization techniques.
