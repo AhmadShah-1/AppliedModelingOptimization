@@ -63,110 +63,6 @@ The MSE constraint forces the model to stay accurate enough.
 The linking constraint says that if z_j = 0, then beta_j must be zero, so feature j is not used.
 
 ___________________________________________________________________
-# Convexity of the Ideal Model:
-This ideal model is non-convex because:
-z_j are binary variables
-the feature-selection structure is combinatorial
-___________________________________________________________________
-# Convex Relaxation: Weighted LASSO Model
-minimize over beta:
-(1 / 2n) ||y - X beta||_2^2 + lambda * sum from j=1 to p of c_j |beta_j|
-
-minimize over beta:
-(1 / 2n) ||y - X beta||_2^2
-+ lambda * sum from j=1 to p of c_j |beta_j|
-+ (rho / 2) ||beta||_2^2
-
-Meaning
-The first term measures prediction error
-The L1 penalty encourages sparsity
-The optional L2 penalty improves stability when features are correlated
-___________________________________________________________________
-
-# Convexity Of The Relaxed Model
-This relaxed model is convex because:
-the squared error term is convex
-the L1 norm is convex
-the L2 squared norm is convex
-
-If rho > 0, the elastic net version is strongly convex, which helps give a unique solution.
-___________________________________________________________________
-# Feasible Set
-
-If you write LASSO in constrained form, the model becomes:
-minimize over beta:
-(1 / 2n) ||y - X beta||_2^2
-
-subject to
-sum from j=1 to p of c_j |beta_j| <= s
-
-This feasible set is a weighted L1 ball, which is:
-convex
-closed
-bounded
-___________________________________________________________________
-# Why A Solution Exists
-
-For the convex relaxed model:
-the objective is continuous
-the feasible set in constrained form is closed and bounded
-therefore a minimizer exists
-For the elastic net version:
-
-the objective is coercive and convex
-so a minimizer exists
-if rho > 0, the solution is typically unique
-___________________________________________________________________
-# Closed-Form Baseline
-LASSO does not usually have a full closed-form solution, but ridge regression does, so ridge is a good mathematical baselin
-Ridge model:
-minimize over beta:
-(1 / 2n) ||y - X beta||_2^2 + (rho / 2) ||beta||_2^2
-
-Closed-form solution:
-beta_hat = (X^T X + n rho I)^(-1) X^T y
-___________________________________________________________________
-# Numerical Solution For The Sparse Model
-
-For LASSO or elastic net, use coordinate descent.
-
-A standard update is:
-beta_j <- S(a_j, lambda c_j) / b_j
-where
-a_j = (1/n) x_j^T (y - X_{-j} beta_{-j})
-and
-b_j = (1/n) ||x_j||_2^2 + rho
-and the soft-thresholding operator is
-S(a,t) = sign(a) * max(|a| - t, 0)
-___________________________________________________________________
-# Validation Plan
-
-Use this as your workflow:
-Define the target
-    Use rows with glucose codes 58, 60, 62, 64.
-
-Build features
-    Use only events that happened before each target measurement.
-
-Clean the data
-    Handle malformed dates, irregular times, and nonnumeric glucose values if needed.
-
-Split by time
-    Train on earlier observations and test on later observations.
-
-Compare models
-    Mean predictor
-    Ridge regression
-    LASSO
-    Elastic net
-    Optional PCA baseline
-
-Evaluate
-    MSE
-    RMSE
-    Number of selected predictors
-    tradeoff between sparsity and accuracy
-___________________________________________________________________
 Workflow
 
 1. Load data
@@ -261,23 +157,6 @@ Look at which variables elastic net/LASSO keeps:
 Explain what the selected predictors mean clinically and what the tradeoff is between:
     fewer predictors
     lower prediction error
-
-
-# Concise version
-Load and merge patient files
-Transform raw date/time into Day and MinuteOfDay
-Select pre-meal glucose rows as targets
-Engineer lagged insulin, meal, exercise, and glucose features
-Clean invalid or missing entries
-Split data into past-for-training and future-for-testing
-Fit baseline models
-Fit ridge regression
-Fit LASSO regression
-Fit elastic net regression
-Tune regularization parameters
-Choose the best sparse model
-Test on held-out data using MSE/RMSE
-Interpret selected predictors and conclusions
 
 
 For more detailed model:
