@@ -77,7 +77,7 @@ Medical codes in dataset:
 - **Objective Functions**:
   - MSE: `(1/2) * mean((X @ w - y)^2)` $\frac{1}{2} \sum_{i=1}^{n}((\mathbf{X} \mathbf{w} - \mathbf{y})^2)$
   - L1: MSE + `lam * ||w[1:]||_1` $\lambda \lVert \mathbf{w} \rVert_1$
-  - L2: MSE + `(1/2) * rho * sum(w[1:]^2)` $\frac{1}{2} \rho \lVert \mathbf{w}^2 \rVert_2$
+  - L2: MSE + `(1/2) * rho * sum(w[1:]^2)` $\frac{1}{2} \rho \lVert \mathbf{w} \rVert_2^2$
   - Elastic Net: MSE + L1 + L2
 - **Soft-Thresholding**: Applied for L1/Elastic Net regularization
 - **Bias Exclusion**: Regularization applied only to feature coefficients, not bias term
