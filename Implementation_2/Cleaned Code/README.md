@@ -35,7 +35,6 @@ Implements custom gradient descent optimization and model evaluation:
 - Processes data:
   - Creates datetime from Date and Time columns
   - Pivots data by Code (medical codes) as columns
-  - Fills missing values using patient-level averages
 - Creates target variable:
   - Uses pre-meal blood glucose codes (58, 60, 62) - codes at even indices
   - Averages pre-meal measurements as feature
