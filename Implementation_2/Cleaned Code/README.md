@@ -35,13 +35,14 @@ Implements custom gradient descent optimization and model evaluation:
 - Processes data:
   - Creates datetime from Date and Time columns
   - Pivots data by Code (medical codes) as columns
+  - Fill missing activity or glucose measurements by the mean code measurement (per-patient) 
 - Creates target variable:
-  - Uses pre-meal blood glucose codes (58, 60, 62) - codes at even indices
+  - Uses pre-meal blood glucose codes (58, 60, 62, 64) - pre-meal glucose measurments
   - Averages pre-meal measurements as feature
-  - Shifts by -1 to create next-measurement target for each patient
+  - Shifts by -1 to create next-measurement target for each patient (i.e., for current patient indicators, predict next period pre-glucose)
 - Feature engineering:
-  - Drops pre-meal glucose codes and mean/target columns
-  - Fills remaining missing values with mode
+  - Drops pre-meal glucose codes and mean/target columns (i.e., prevent data leakage)
+  - Fills remaining missing values with mode (i.e., across all patients)
   - Scales features using MinMaxScaler (fit on training data)
   - Adds bias term
 - Trains four models:
@@ -70,22 +71,20 @@ Medical codes in dataset:
 - **63**: Post-supper blood glucose
 - **64**: Pre-snack blood glucose
 
-The model uses **pre-meal codes (58, 60, 62)** only for the feature representation.
-
 ## Algorithm Details
 
 ### Gradient Descent Implementation
 - **Objective Functions**:
-  - MSE: `(1/2) * mean((X @ w - y)^2)`
-  - L1: MSE + `lam * ||w[1:]||_1`
-  - L2: MSE + `(1/2) * rho * sum(w[1:]^2)`
+  - MSE: `(1/2) * mean((X @ w - y)^2)` $\frac{1}{2} \sum_{i=1}^{n}((\mathbf{X} \mathbf{w} - \mathbf{y})^2)$
+  - L1: MSE + `lam * ||w[1:]||_1` $\lambda \lVert \mathbf{w} \rVert_1$
+  - L2: MSE + `(1/2) * rho * sum(w[1:]^2)` $\frac{1}{2} \rho \lVert \mathbf{w}^2 \rVert_2$
   - Elastic Net: MSE + L1 + L2
 - **Soft-Thresholding**: Applied for L1/Elastic Net regularization
 - **Bias Exclusion**: Regularization applied only to feature coefficients, not bias term
 - **Convergence**: Stops when `||w_new - w|| < 1e-4` or reaches max 1000 iterations
 
 ### Data Pipeline
-1. Extract and decompress diabetes patient records
+1. Uncompress and extract diabetes patient records
 2. Add patient identifiers and transform to standard format
 3. Consolidate all patient data into single file
 4. Pivot codes as features, create target variable (next pre-meal glucose)
