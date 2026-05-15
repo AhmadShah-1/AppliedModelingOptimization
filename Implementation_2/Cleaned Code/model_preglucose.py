@@ -225,7 +225,7 @@ base_train_results['abs error'] = np.abs((base_train_results['y_pred'] - base_tr
 
 
 # scale test data set but with respect to the training data
-X_test = pd.DataFrame(X_test, columns=train_cols)
+#X_test = pd.DataFrame(X_test, columns=train_cols)
 X_test = pd.DataFrame(scaler.transform(X_test), columns=train_cols)
 X_test = np.c_[np.ones(len(X_test)), X_test]
 X_test = pd.DataFrame(X_test, columns=np.insert(train_cols, 0, 'bias'))
