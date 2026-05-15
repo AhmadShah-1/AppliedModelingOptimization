@@ -1,14 +1,8 @@
 # header of the script with a description of its purpose and the author
 """
-This script is designed to transform the extracted diabetes data by unstacking the Code column as individual columns per code and filling in the values from the Value column, then saving it as a clean CSV file.
+This script is designed to transform the extracted diabetes data by concatenating into one file for downstream modeling.
 Author: Chris Ognibene
 """
-# This script performs the following tasks:
-# 1. It imports necessary libraries for handling compressed files, file paths, and data manipulation.
-# 2. It sets the directory path for the compressed file and the output directory for the extracted data.
-# 3. It checks if the directory for extracted data exists, and if not, it creates it.
-# 4. It extracts the compressed file, reads the contents into a dataframe, and saves it as clean CSV files in the specified output directory.
-
 
 # import necessary libraries for handling compressed files, file paths, and data manipulation
 from pathlib import Path 

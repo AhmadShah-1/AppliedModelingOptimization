@@ -327,14 +327,14 @@ metrics_df.index = ['Base Model (Train)', 'Base Model (Test)',
                     'L2 Model (Train)', 'L2 Model (Test)', 
                     'Elastic Net Model (Train)', 'Elastic Net Model (Test)'] 
 metrics_df.columns = ['MSE', 'RMSE', 'MAPE']
-metrics_df.to_csv(output_dir / 'metrics.csv')
+metrics_df.round(6).to_csv(output_dir / 'metrics.csv')
 
 # compile coefficients for each model 
 coeff_df = pd.DataFrame(np.concatenate(
     (w_opt.reshape(-1,1), w_opt_l1.reshape(-1,1), w_opt_l2.reshape(-1,1), w_opt_elastic.reshape(-1,1)), axis=1))
 coeff_df.index = X_train.columns
 coeff_df.columns = ['Base Model', 'L1 Model', 'L2 Model', 'Elastic Net Model']
-coeff_df.to_csv(output_dir / 'opt_coefficients.csv')
+coeff_df.round(6).to_csv(output_dir / 'opt_coefficients.csv')
 
 
 #######################Diagnostic Plots##############################
@@ -385,35 +385,3 @@ for i, j in np.argwhere(dummy_array == 0):
 fig.suptitle("Normal Q-Q Plots")
 fig.tight_layout()
 fig.savefig(output_dir / 'qq_plots.png')
-
-# Multi-collinearity check
-# Quick check for Multicollinearity (VIF)
-from statsmodels.stats.outliers_influence import variance_inflation_factor
-vif_data = pd.DataFrame()
-vif_data["feature"] = X_train.columns[1:]
-vif_data["VIF"] = [variance_inflation_factor(X_train.iloc[:, 1:].values, i) for i in range(len(X_train.columns[1:]))]
-vif_data
-
-# look at the p-values of coefficients in the final models 
-# look at the R2 values of the final models 
-# p-values: t-stat --> apply the inverse CDF --> p-value
-
-# Cook's Distance  (DRAFT ONLY)
-# References: https://www.statology.org/cooks-distance-python/
-# Leverage: https://en.wikipedia.org/wiki/Leverage_(statistics)
-
-#hat_matrix = X_train @ np.linalg.inv(X_train.T @ X_train) @ X_train.T # has perfect multi-collinearity
-#hat_matrix = X_train @ np.linalg.pinv(X_train.T @ X_train) @ X_train.T # has perfect multi-collinearity
-##H = X_with_const @ np.linalg.inv(X_with_const.T @ X_with_const) @ X_with_const.T
-
-#H = (X_train @ np.linalg.pinv(X_train.T @ X_train)).T @ X_train
-#leverage = np.diagonal(H)
-
-def cooks_distance(resid, p, mse, lev):
-    return (resid**2 / (p * mse)) * (lev/ (1-lev)**2)
-
-#cooks_dist = cooks_distance(base_train_results['error'], len(X_train.columns[1:]),
-#                            (base_train_results['error']**2).mean(), leverage[0])
-
-# Partial Regression Plots
-from statsmodels.graphics.regressionplots import plot_partregress_grid
