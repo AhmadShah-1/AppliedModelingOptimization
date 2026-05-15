@@ -188,29 +188,24 @@ final_data['target'] = final_data.groupby(['PATIENT_ID'])['mean'].shift(-1) # la
 # fill missing recordings with the mode of the code
 final_data = final_data.fillna(final_data.mode().loc[0])
 
+# create the training and target columns 
+X = final_data.drop(np.insert(pre_glucose_cols, -1, ['mean', 'target']), axis=1)
+y = final_data['target']
 
-#  Sort data by patient id and time
-final_data = final_data.sort_index(ascending=True)
+# split data into train-test split
+from sklearn.model_selection import train_test_split
+test_pct = .2
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = test_pct, shuffle=False)
 
-# 2. Stratify by 'PATIENT_ID' and take the first 80% of patients from each group for training (20% testing)
-stratified_sample = final_data.groupby('PATIENT_ID', group_keys=False).apply(
-    lambda x: x.iloc[: int(np.ceil(len(x) * 0.8))])
-
-train_df = final_data[final_data.index.isin(stratified_sample.index)]
-test_df = final_data[~final_data.index.isin(stratified_sample.index)]
-y_train = train_df['target']
-y_test = test_df['target']
-
-X_train = train_df.drop(np.insert(pre_glucose_cols, -1, ['mean', 'target']), axis=1)
-X_test = test_df.drop(np.insert(pre_glucose_cols, -1, ['mean', 'target']), axis=1)
-train_cols = X_train.columns
+X_train = pd.DataFrame(X_train, columns=X.columns)
+X_test = pd.DataFrame(X_test, columns=X.columns)
 
 # scale the data (X only)
 scaler = MinMaxScaler()
 X_train = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns)
 
 X_train = np.c_[np.ones(len(X_train)), X_train]
-X_train = pd.DataFrame(X_train, columns=np.insert(train_cols, 0, 'bias')) # add a bias term
+X_train = pd.DataFrame(X_train, columns=np.insert(X.columns, 0, 'bias')) # add a bias term
 
 
 # initialize weight vector 
@@ -225,10 +220,10 @@ base_train_results['abs error'] = np.abs((base_train_results['y_pred'] - base_tr
 
 
 # scale test data set but with respect to the training data
-X_test = pd.DataFrame(X_test, columns=train_cols)
-X_test = pd.DataFrame(scaler.transform(X_test), columns=train_cols)
+X_test = pd.DataFrame(X_test, columns=X.columns)
+X_test = pd.DataFrame(scaler.transform(X_test), columns=X.columns)
 X_test = np.c_[np.ones(len(X_test)), X_test]
-X_test = pd.DataFrame(X_test, columns=np.insert(train_cols, 0, 'bias'))
+X_test = pd.DataFrame(X_test, columns=np.insert(X.columns, 0, 'bias'))
 
 base_test_results = pd.DataFrame({'y_pred' : X_test @ w_opt, 'y_act' : y_test.values})
 base_test_results['error'] = (base_test_results['y_pred'] - base_test_results['y_act'])
