@@ -372,7 +372,7 @@ fig.tight_layout()
 fig.savefig(output_dir / 'residual_plots.png')
 
 
-# QQ Plots
+# QQ Plots #
 import statsmodels.api as sm
 
 fig, ax = plt.subplots(4,2, figsize=(10,10))
